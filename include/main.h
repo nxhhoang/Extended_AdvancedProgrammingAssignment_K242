@@ -7,12 +7,22 @@
 #include <cstdlib>
 #include <vector>
 #include <ctime>
-#include <conio.h> 
 #include <thread>
-#include <chrono>
 #include <iomanip>
-#include <math.h>
+#include <cmath> // thay vì math.h
 
 #define VectorMatrix vector<vector<int>>
+
+#ifdef _WIN32
+    #include <conio.h>
+    #include <chrono>
+#endif
+
+#ifdef __linux__
+    #include <termios.h>
+    #include <unistd.h>
+    #include <fcntl.h>
+    #include <stdio.h>
+#endif
 
 #endif

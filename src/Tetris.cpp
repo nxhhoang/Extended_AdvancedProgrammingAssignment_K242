@@ -36,14 +36,58 @@ string colorBlock(int color) {
     return ss.str();
 }
 
+int getch_compatible() {
+#ifdef _WIN32
+    return _getch();
+#elif defined(__linux__)
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
+#endif
+}
+
+bool kbhit_compatible() {
+#ifdef _WIN32
+    return _kbhit();
+#elif defined(__linux__)
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if (ch != EOF) {
+        ungetc(ch, stdin);
+        return true;
+    }
+    return false;
+#endif
+}
+
 void Tetris::clearInputBuffer() {
-    while (_kbhit()) _getch(); 
+    while (kbhit_compatible()) getch_compatible(); 
 }
 
 void Tetris::handlePause() {
     while (paused) {
-        if (_kbhit()) {
-            int c = _getch();
+        if (kbhit_compatible()) {
+            int c = getch_compatible();
             if (c == 'r' || c == 'R') {
                 paused = 0;
                 return;
@@ -136,13 +180,13 @@ void Tetris::handleInput() {
     auto now = std::chrono::steady_clock::now();
 
     if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastInput).count() > 100) {
-        if (_kbhit()) {
-            int c = _getch();
+        if (kbhit_compatible()) {
+            int c = getch_compatible();
             int x = current.getX();
             int y = current.getY();
 
             if (c == 224 || c == 0) {
-                int special = _getch();
+                int special = getch_compatible();
                 switch (special) {
                     case 72: rotate(); break;                    
                     case 80: if (!collides(0, 1)) current.setY(y + 1); break;
