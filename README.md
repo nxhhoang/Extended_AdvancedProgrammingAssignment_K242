@@ -2,7 +2,7 @@
 A simple Tetris game that runs in the terminal, created for a programming assignment.
 
 # Demo
-https://github.com/user-attachments/assets/545c7f07-1466-4ab0-8f45-da4366055aed
+https://github.com/user-attachments/assets/a4c433e7-9b71-43e3-a4dc-5f8e8c9bb736
 
 # How to run
 ## Window
