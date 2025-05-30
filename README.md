@@ -17,7 +17,18 @@ git clone https://github.com/nxhhoang/Extended_AdvancedProgrammingAssignment_K24
 ./tetris.exe
 ```
 ## Linux
-- Currently, some C++ libraries don't support for linux, so Makefile and run.sh are not created 
+```git
+# Clone the repository
+git clone https://github.com/nxhhoang/Extended_AdvancedProgrammingAssignment_K242.git
+
+# Compile
+./run.sh
+or 
+make all
+
+# Run
+./tetris.exe
+```
 
 # About
 The Tetris game is designed to run in the terminal, allowing players to control falling blocks (Tetrominoes) using the keyboard. The project is clearly organized following the object-oriented programming (OOP) model, divided into multiple classes and source files.
@@ -29,4 +40,9 @@ The Tetris game is designed to run in the terminal, allowing players to control 
 - Press w, W, ▲ to rotate
 - Press p, P,   to pause
 - Press r, R,   to resume
+- Press o, O,   to save game
 - Press SPACE   to drop instantly
+
+# Updates
+- Tetris now can be played in Linux and Window.
+- Add Mode Options: Levels, Continue last time playing (if saved), Help List.
