@@ -1,6 +1,6 @@
 #include "Tetromino.h"
 
-Tetromino::Tetromino() : x(WIDTH / 2 - 2), y(0) {
+Tetromino::Tetromino() : x(WIDTH / 2 - 2), y(0), uid(-1) {
 }
 
 int Tetromino::getColor() const {
@@ -30,6 +30,14 @@ vector<vector<int>> &Tetromino::getShape() {
     return this->shape;
 }
 
-void Tetromino::setShape(vector<vector<int>> update) {
+void Tetromino::setShape(vector<vector<int>> &update) {
     this->shape = update;
+}
+
+int Tetromino::getID() const {
+    return uid;
+}
+
+void Tetromino::setID(int id) {
+    uid = id;
 }

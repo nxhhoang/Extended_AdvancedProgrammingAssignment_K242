@@ -6,6 +6,9 @@
 #include <sstream>
 #include <cstdlib>
 #include <vector>
+#include <regex>
+#include <fstream>
+#include <string>
 #include <ctime>
 #include <thread>
 #include <iomanip>

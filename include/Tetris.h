@@ -16,31 +16,44 @@ private:
     bool paused = 0;
 
     string name = "";
+    string tmpName = "";
     string hello = "Hello ";
 
     int nameIter = 5;
     int width_score = 16;
+    int glb = 0;
+    int sizeTable = 3;
+    int maxSizeTable = 6;
+    int speed = 400;
 
 public:
     Tetris();
 
     void Playing();
     void InsertName();
+    void LevelAndContinue();
     void spawnTetromino();
     void spawnNextTetromino();
+    void setTetromino(int fid, int fcolor, int nid, int ncolor);
 
     void handleInput();
     void merge();
     void handlePause();
     bool collides(int x, int y);
+    string movePtr(int val);
+    int handleEnter();
 
     void clearLines();
     void clearInputBuffer();
+    int Option();
+    void Help();
 
     void rotate();
     string centerWithColor(const string& content, int totalWidth);
     void outsider(int i);
     void draw();
+    void SaveGame();
+    void GameOver();
 };
 
 #endif

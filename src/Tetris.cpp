@@ -88,12 +88,18 @@ void Tetris::handlePause() {
     while (paused) {
         if (kbhit_compatible()) {
             int c = getch_compatible();
+            if (c == 'o' || c == 'O') SaveGame();
             if (c == 'r' || c == 'R') {
                 paused = 0;
                 return;
             }
         }
     }
+}
+
+string Tetris::movePtr(int val) {
+    if (val == glb) return " -> ";
+    return "   ";
 }
 
 void Tetris::InsertName() {
@@ -104,21 +110,181 @@ void Tetris::InsertName() {
         getline(cin, name);
         system("cls");
     } while (name.size() < 1 || name.size() > 10);
+    tmpName = name;
     name += string(WIDTH + 2 - name.size(), ' ');
     nameIter = name.size();
 }
 
+int Tetris::handleEnter() {
+    if (kbhit_compatible()) {
+        int c = getch_compatible();
+        if (c == 13) return 1;
+        else if (c == 'S' || c == 's') return 2;
+        else if (c == 'W' || c == 'w') return 3;
+        else if (c == 224 || c == 0) {
+            int v = getch_compatible();
+            if (v == 72) return 3; 
+            else if (v == 80) return 2;
+        }
+    }
+    return -1;
+}
+
+int visibleLength(const string& str) {
+    string cleaned = std::regex_replace(str, std::regex("\033\\[[0-9;]*m"), "");
+    
+    int length = 0;
+    for (char ch : cleaned) {
+        if ((unsigned char)ch >= 0xC0) length += 2; 
+        else length++;
+    }
+    return length;
+}
+
+void printInFrame(const string& content, int width = 57) {
+    string mhm = "\033[48;5;245m--\033[0m";
+    int visible = visibleLength(content);
+    int padding = max(0, width - visible);
+
+    cout << mhm << content << string(padding, ' ') << mhm << endl;
+}
+
+
+void Tetris::Help() {
+    string press = "\033[0m  Press \033[31m";
+    string endd = "\033[0m";
+
+    printInFrame(press + "a, A, " + char(17) + "\033[0m to move to \033[1;35mleft\033[0m" + endd);
+    printInFrame(press + "d, D, " + char(16) + "\033[0m to move to \033[34mright\033[0m" + endd);
+    printInFrame(press + "s, S, " + char(31) + "\033[0m to move to \033[33mdown faster\033[0m" + endd);
+    printInFrame(press + "w, W, " + char(30) + "\033[0m to \033[32mrotate\033[0m" + endd);
+    printInFrame(press + "p, P, " + "\033[0m  to \033[36mpause\033[0m" + endd);
+    printInFrame(press + "r, R, " + "\033[0m  to \033[30mresume\033[0m" + endd);
+    printInFrame(press + "o, O, " + "\033[0m  to \033[35msave game\033[0m" + endd);
+    printInFrame(press + "SPACE " + "\033[0m  to \033[96mdrop instantly\033[0m" + endd);
+    printInFrame("");
+    printInFrame("\033[35m                 PRESS ANY KEY TO GO BACK\033[0m");
+
+    cout << "\033[48;5;245m-------------------------------------------------------------\033[0m\n";
+    while (kbhit_compatible() == false) {}
+}
+
+
+int Tetris::Option() {
+    if (glb == 0) {
+        if (sizeTable != maxSizeTable) sizeTable = maxSizeTable;
+        else sizeTable = 3;
+    } else if (sizeTable == maxSizeTable && glb <= 3) {
+        if (glb == 1) speed = 400;
+        else if(glb == 2) speed = 300;
+        else if (glb == 3) speed = 150;
+        return -1; // Mã break
+    } else if (glb == (5 - maxSizeTable + sizeTable)) Help();
+    else if (glb == 4 - maxSizeTable + sizeTable) {
+        ifstream fin("data.txt");
+        string line;
+        bool ok = false;
+        while(getline(fin, line)) {
+            if (line == "current=1") {
+                ok = true;
+                for (int i = 0; i < HEIGHT + 2; i++) {
+                    getline(fin, line);
+                    int k = 0;
+                    for (int j = 0; j < WIDTH + 2; j++) {
+                        string num = "";
+                        while(k < line.size() && '0' <= line[k] && line[k] <= '9') num += line[k++];
+                        gameBoard.setBoardXY(i, j, stoi(num));
+                        k++; //Skip space
+                    }
+                }
+                getline(fin, line);
+                name = line;
+                tmpName = line;
+                getline(fin, line);
+                speed = stoi(line);
+                getline(fin, line);
+                score = stoi(line);
+                getline(fin, line);
+                int a, b, c, d;
+                sscanf(line.c_str(), "%d %d %d %d", &a, &b, &c, &d);
+                setTetromino(a,b,c,d);
+            }
+        }
+        fin.close();
+        if (ok == true) return 2; // read successfully
+        else return -2;
+    }
+    return 0;
+}
+
+void Tetris::LevelAndContinue() {
+    string mhm = "\033[48;5;245m-------------------------------------------------------------\033[0m\n";
+    while (1) {
+        cout << "\033[36m" << char(30) << " to go up using W, w or " << char(30) << " arrow" << "\033[0m" << endl;
+        cout << "\033[36m" << char(31) << " to go down using S, s or " << char(31) << " arrow" << "\033[0m" << endl;
+        cout << "\033[33mEnter to choose\033[0m\n" << mhm;
+        printInFrame(movePtr(0) + "\033[35m Choose your level\033[0m");
+
+        if (sizeTable == maxSizeTable) {
+            printInFrame(movePtr(1) + "\033[32m 1. Easy\033[0m");
+            printInFrame(movePtr(2) + "\033[33m 2. Medium\033[0m");
+            printInFrame(movePtr(3) + "\033[31m 3. Hard\033[0m");
+        }
+
+        printInFrame(movePtr(4 - (maxSizeTable - sizeTable)) + "\033[34m Continue last playing\033[0m");
+        printInFrame(movePtr(5 - (maxSizeTable - sizeTable)) + "\033[36m Help - How to play?!!?!?!?\033[0m");
+        cout << mhm;
+
+        int val = handleEnter();
+        if (val == 1) {
+            int opt = Option();
+            if (opt == -1 || opt == 2) {
+                system("cls");
+                break;
+            } else if (opt == -2) {
+                printInFrame("");
+                printInFrame("\033[31m                     No data available\033[0m");
+                printInFrame("");
+                printInFrame("\033[35m                 PRESS ANY KEY TO GO BACK\033[0m");
+                cout << mhm;
+                while (kbhit_compatible() == false) {}
+            }
+        }
+        else if (val == 2) glb = (glb + 1) % sizeTable;
+        else if (val == 3) glb = (glb - 1 + sizeTable) % sizeTable;
+
+        clearInputBuffer();
+        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        system("cls");
+    }
+}
+
 void Tetris::spawnTetromino() {
     int id = rand() % 7;
-    current.getShape() = tetrominoShapes[id];
+    current.setShape(tetrominoShapes[id]);
+    current.setID(id);
     current.setX(WIDTH / 2 - 2);
     current.setY(0);
     current.setColor(rand() % 7 + 1);
 }
 
+void Tetris::setTetromino(int fid, int fcolor, int nid, int ncolor) {
+    current.setShape(tetrominoShapes[fid]);
+    current.setID(fid);
+    current.setColor(fcolor);
+    current.setX(WIDTH / 2 - 2);
+    current.setY(0);
+    nextT.setShape(tetrominoShapes[nid]);
+    nextT.setID(nid);
+    nextT.setColor(ncolor);
+    nextT.setX(WIDTH / 2 - 2);
+    nextT.setY(0);
+}
+
 void Tetris::spawnNextTetromino() {
     int id = rand() % 7;
-    nextT.getShape() = tetrominoShapes[id];
+    nextT.setShape(tetrominoShapes[id]);
+    nextT.setID(id);
     nextT.setX(WIDTH / 2 - 2);
     nextT.setY(0);
     nextT.setColor(rand() % 7 + 1);
@@ -145,10 +311,12 @@ Tetris::Tetris() {
     gameBoard = Board();
     current = Tetromino();
     nextT = Tetromino();
-    InsertName();
+    name = "";
+    LevelAndContinue();
+    if (name == "") InsertName();
     srand(time(0));
-    spawnTetromino();
-    spawnNextTetromino();
+    if (current.getID() == -1) spawnTetromino();
+    if (nextT.getID() == -1) spawnNextTetromino();
 }
 
 void Tetris::Playing() {
@@ -165,14 +333,36 @@ void Tetris::Playing() {
             current = nextT;
             spawnNextTetromino();
             if (collides(0, 0)) {
-                cout << "Game Over!\n";
+                system("cls");
+                GameOver();
                 break;
             }
         }
         clearInputBuffer();
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        std::this_thread::sleep_for(std::chrono::milliseconds(speed));
     }
+}
+
+void Tetris::SaveGame()
+{
+    ofstream fout("data.txt"); 
+    fout << "current=1\n";
+    for (int i = 0; i < HEIGHT + 2; i++)
+    {
+        for (int j = 0; j < WIDTH + 2; j++)
+        {
+            fout << gameBoard.getBoardXY(i, j);
+            if (j != WIDTH + 1)
+                fout << " "; 
+        }
+        fout << "\n";
+    }
+    fout << name << "\n";
+    fout << speed << "\n";
+    fout << score << "\n";
+    fout << current.getID() << " " << current.getColor() << " " << nextT.getID() << " " << nextT.getColor() << "\n";
+    fout.close();
 }
 
 void Tetris::handleInput() {
@@ -202,6 +392,7 @@ void Tetris::handleInput() {
                     case 'a': case 'A': if (!collides(-2, 0)) current.setX(x - 2); break;
                     case 'd': case 'D': if (!collides(2, 0)) current.setX(x + 2); break;
                     case ' ': while (!collides(0, 1)) current.setY(current.getY() + 1); break;
+                    case 'o': case 'O': SaveGame(); break;
                 }
             }
             lastInput = now;
@@ -287,8 +478,10 @@ void Tetris::outsider(int i) {
     
     if (i == 19) cout << press << "r, R, " 
                     << "\033[0m  to \033[30mresume" << endd;
-    
-    if (i == 20) cout << press << "SPACE " 
+    if (i == 20) cout << press << "o, O, "
+                    << "\033[0m  to \033[35msave game" << endd;
+
+    if (i == 21) cout << press << "SPACE " 
                     << "\033[0m  to \033[96mdrop instantly" << endd;
 }
 
@@ -307,6 +500,7 @@ void Tetris::draw() {
                 else cout << "\033[30;44m";
                 cout << "-";
                 cout << "\033[0m";
+                if (j == WIDTH + 1) outsider(i);
                 continue;
             }
             if (j <= 1 && i != 0) {
@@ -395,4 +589,69 @@ void Tetris::clearLines() {
         }
     }
     score += val * val * val;
+}
+
+void Tetris::GameOver() {
+    int val = 0;
+    int t = 0;
+    string arr[] = {"\033[31m", "\033[32m", "\033[33m", "\033[34m", "\033[35m", "\033[36m", "\033[37m"};
+    string tmp = "                               " + tmpName + " [finished with a score of] " + to_string(score);
+    int iter = 0;
+    while(1) {
+        cout << arr[val];
+        if (t == 0) std::cout << R"(
+  /$$$$$$   /$$$$$$  /$$      /$$ /$$$$$$$$        /$$$$$$  /$$    /$$ /$$$$$$$$ /$$$$$$$
+ /$$__  $$ /$$__  $$| $$$    /$$$| $$_____/       /$$__  $$| $$   | $$| $$_____/| $$__  $$
+| $$  \__/| $$  \ $$| $$$$  /$$$$| $$            | $$  \ $$| $$   | $$| $$      | $$  \ $$
+| $$ /$$$$| $$$$$$$$| $$ $$/$$ $$| $$$$$         | $$  | $$|  $$ / $$/| $$$$$   | $$$$$$$/
+| $$|_  $$| $$__  $$| $$  $$$| $$| $$__/         | $$  | $$ \  $$ $$/ | $$__/   | $$__  $$
+| $$  \ $$| $$  | $$| $$\  $ | $$| $$            | $$  | $$  \  $$$/  | $$      | $$  \ $$
+|  $$$$$$/| $$  | $$| $$ \/  | $$| $$$$$$$$      |  $$$$$$/   \  $/   | $$$$$$$$| $$  | $$
+ \______/ |__/  |__/|__/     |__/|________/       \______/     \_/    |________/|__/  |__/
+    )" << "\033[30m" <<std::endl;
+
+        if (t == 1) std::cout << R"(
+  ______    ______   __       __  ________         ______   __     __  ________  _______  
+ /      \  /      \ |  \     /  \|        \       /      \ |  \   |  \|        \|       \
+|  $$$$$$\|  $$$$$$\| $$\   /  $$| $$$$$$$$      |  $$$$$$\| $$   | $$| $$$$$$$$| $$$$$$$\
+| $$ __\$$| $$__| $$| $$$\ /  $$$| $$__          | $$  | $$| $$   | $$| $$__    | $$__| $$
+| $$|    \| $$    $$| $$$$\  $$$$| $$  \         | $$  | $$ \$$\ /  $$| $$  \   | $$    $$
+| $$ \$$$$| $$$$$$$$| $$\$$ $$ $$| $$$$$         | $$  | $$  \$$\  $$ | $$$$$   | $$$$$$$\
+| $$__| $$| $$  | $$| $$ \$$$| $$| $$_____       | $$__/ $$   \$$ $$  | $$_____ | $$  | $$
+ \$$    $$| $$  | $$| $$  \$ | $$| $$     \       \$$    $$    \$$$   | $$     \| $$  | $$
+  \$$$$$$  \$$   \$$ \$$      \$$ \$$$$$$$$        \$$$$$$      \$     \$$$$$$$$ \$$   \$$
+    )" << "\033[30m" <<std::endl;
+
+        if (t == 2) std::cout << R"(
+  ______    ______   __       __  ________         ______   __     __  ________  _______  
+ /      \  /      \ /  \     /  |/        |       /      \ /  |   /  |/        |/       \
+/$$$$$$  |/$$$$$$  |$$  \   /$$ |$$$$$$$$/       /$$$$$$  |$$ |   $$ |$$$$$$$$/ $$$$$$$  |
+$$ | _$$/ $$ |__$$ |$$$  \ /$$$ |$$ |__          $$ |  $$ |$$ |   $$ |$$ |__    $$ |__$$ |
+$$ |/    |$$    $$ |$$$$  /$$$$ |$$    |         $$ |  $$ |$$  \ /$$/ $$    |   $$    $$<
+$$ |$$$$ |$$$$$$$$ |$$ $$ $$/$$ |$$$$$/          $$ |  $$ | $$  /$$/  $$$$$/    $$$$$$$  |
+$$ \__$$ |$$ |  $$ |$$ |$$$/ $$ |$$ |_____       $$ \__$$ |  $$ $$/   $$ |_____ $$ |  $$ |
+$$    $$/ $$ |  $$ |$$ | $/  $$ |$$       |      $$    $$/    $$$/    $$       |$$ |  $$ |
+ $$$$$$/  $$/   $$/ $$/      $$/ $$$$$$$$/        $$$$$$/      $/     $$$$$$$$/ $$/   $$/
+    )" << "\033[30m" <<std::endl;
+
+        if (t == 3) std::cout << R"(
+ $$$$$$\   $$$$$$\  $$\      $$\ $$$$$$$$\        $$$$$$\  $$\    $$\ $$$$$$$$\ $$$$$$$\
+$$  __$$\ $$  __$$\ $$$\    $$$ |$$  _____|      $$  __$$\ $$ |   $$ |$$  _____|$$  __$$\
+$$ /  \__|$$ /  $$ |$$$$\  $$$$ |$$ |            $$ /  $$ |$$ |   $$ |$$ |      $$ |  $$ |
+$$ |$$$$\ $$$$$$$$ |$$\$$\$$ $$ |$$$$$\          $$ |  $$ |\$$\  $$  |$$$$$\    $$$$$$$  |
+$$ |\_$$ |$$  __$$ |$$ \$$$  $$ |$$  __|         $$ |  $$ | \$$\$$  / $$  __|   $$  __$$<
+$$ |  $$ |$$ |  $$ |$$ |\$  /$$ |$$ |            $$ |  $$ |  \$$$  /  $$ |      $$ |  $$ |
+\$$$$$$  |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\        $$$$$$  |   \$  /   $$$$$$$$\ $$ |  $$ |
+ \______/ \__|  \__|\__|     \__|\________|       \______/     \_/    \________|\__|  \__|
+    )" << "\033[30m" <<std::endl;
+        cout << endl << "           ";
+        cout << "\033[1;35m" + tmp.substr(iter) << "\033[0m";
+        cout << "\033[1;35m" << tmp.substr(0, iter) << "\033[0m\n";
+        iter = (iter - 1 + tmp.size()) % tmp.size();
+        val = (val + 1) % 7;
+        t = (t + 1) % 4;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        system("cls");
+    }
 }

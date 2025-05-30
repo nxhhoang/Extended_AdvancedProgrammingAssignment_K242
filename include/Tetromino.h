@@ -8,6 +8,7 @@ enum TetrominoType { I, O, T, L, J, S, Z };
 class Tetromino {
 private:
     VectorMatrix shape;
+    int uid;
     int color;
     int x;
     int y;
@@ -18,6 +19,9 @@ public:
     int getColor() const;
     void setColor(int color);
     
+    int getID() const;
+    void setID(int id);
+
     int getX() const;
     void setX(int x);
     
@@ -25,7 +29,7 @@ public:
     void setY(int y);    
 
     VectorMatrix &getShape();
-    void setShape(VectorMatrix update);
+    void setShape(VectorMatrix &update);
 };
 
 #endif
